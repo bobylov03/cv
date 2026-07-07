@@ -193,7 +193,8 @@
       <div class="field"><label>Mother's name</label><input name="mothername"></div>
       <div class="field"><label>Date of birth <span class="req">*</span></label><input type="date" name="dob" required></div>
       <div class="field"><label>Nationality</label><input class="dd" name="nationality" list="dl_countries" placeholder="Select or type…" autocomplete="off"></div>
-      <div class="field full"><label>Place of birth <span class="opt">(city, country)</span></label><input name="pob" placeholder="City, Country"></div>
+      <div class="field"><label>Place of birth — country</label><input class="dd" name="pob_country" list="dl_countries" placeholder="Select or type…" autocomplete="off"></div>
+      <div class="field"><label>Place of birth — city</label><input class="dd" name="pob_city" list="dl_pob_cities" placeholder="Select or type…" autocomplete="off"></div>
       <div class="field"><label>Marital status</label>
         <select name="marital"><option value="">Select…</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option></select></div>
       <div class="field"><label>Children under 18</label><input type="number" name="children" min="0" max="20" placeholder="0"></div>
@@ -336,8 +337,8 @@
     <h3 id="ovDoneTitle"></h3>
     <p id="ovDoneMsg"></p>
     <div class="row">
-      <button type="button" class="btn btn-primary" id="ovDownload">Download PDF</button>
-      <button type="button" class="btn btn-ghost" id="ovClose">Close</button>
+      <button type="button" class="btn btn-primary" id="ovClose">Start new form</button>
+      <button type="button" class="btn btn-ghost" id="ovDownload">Download again</button>
     </div>
   </div>
 </div>
@@ -357,10 +358,34 @@ const RANKS = ["Master","Chief Officer","2nd Officer","3rd Officer","Junior Offi
 const VESSEL_TYPES = ["Bulk Carrier","Container","General Cargo","Multipurpose (MPP)","Oil Tanker (Crude)","Oil Tanker (Product)","Chemical Tanker","Oil/Chemical Tanker","LPG Carrier","LNG Carrier","Reefer","Ro-Ro","Ro-Pax","Car Carrier (PCTC)","Passenger / Cruise","Ferry","Heavy Lift","Offshore (PSV)","Offshore (AHTS)","Tug","Dredger","Bunker Tanker","Livestock Carrier","Fishing","Yacht"];
 const ENGINE_TYPES = ["MAN B&W","Wärtsilä","Sulzer","MAN","MaK","Caterpillar","Hyundai-MAN","Mitsubishi","Yanmar","Doosan","Rolls-Royce","2-stroke","4-stroke","Diesel-electric","Dual-fuel","Steam turbine"];
 const COUNTRIES = ["Ukraine","Russia","Poland","Romania","Bulgaria","Georgia","Turkey","Croatia","Latvia","Lithuania","Estonia","Greece","Italy","Spain","Portugal","Netherlands","Germany","United Kingdom","Norway","Denmark","Sweden","France","Belgium","Ireland","Philippines","India","Indonesia","China","Myanmar","Vietnam","Bangladesh","Sri Lanka","Pakistan","Malaysia","Thailand","South Korea","Japan","Singapore","Taiwan","Azerbaijan","Kazakhstan","Moldova","Belarus","Egypt","Morocco","Tunisia","Nigeria","Ghana","South Africa","Kenya","United States","Canada","Brazil","Argentina","Chile","Peru","Mexico","Colombia","Panama","Liberia","Marshall Islands","Malta","Cyprus","Bahamas","Antigua and Barbuda","Cayman Islands","Isle of Man","Gibraltar","Madeira","Hong Kong","Bermuda","Saint Vincent and the Grenadines","Barbados","Comoros","Palau","Cook Islands","Tuvalu","Sierra Leone","Togo","Vanuatu","Curaçao","Belize"];
+const CITIES = {
+ "Ukraine":["Kyiv","Odesa","Chornomorsk","Mykolaiv","Kherson","Mariupol","Izmail","Berdiansk","Kharkiv","Dnipro","Lviv","Zaporizhzhia","Vinnytsia","Ivano-Frankivsk"],
+ "Russia":["Moscow","Saint Petersburg","Novorossiysk","Vladivostok","Murmansk","Kaliningrad","Rostov-on-Don","Nakhodka","Astrakhan","Taganrog","Sochi"],
+ "Philippines":["Manila","Cebu","Iloilo","Davao","Batangas","Zamboanga","Cagayan de Oro","Bacolod","General Santos"],
+ "India":["Mumbai","Chennai","Kochi","Kolkata","Visakhapatnam","Goa","Mangalore","Kandla","Tuticorin","New Delhi"],
+ "Indonesia":["Jakarta","Surabaya","Semarang","Medan","Makassar","Batam","Balikpapan"],
+ "Poland":["Gdynia","Gdansk","Szczecin","Warsaw","Swinoujscie"],
+ "Romania":["Constanta","Bucharest","Galati","Braila","Mangalia"],
+ "Bulgaria":["Varna","Burgas","Sofia"],
+ "Georgia":["Batumi","Poti","Tbilisi"],
+ "Turkey":["Istanbul","Izmir","Mersin","Samsun","Trabzon"],
+ "Croatia":["Split","Rijeka","Dubrovnik","Zadar","Zagreb"],
+ "Greece":["Piraeus","Thessaloniki","Patras","Heraklion"],
+ "China":["Shanghai","Dalian","Qingdao","Guangzhou","Ningbo","Tianjin","Xiamen"],
+ "Myanmar":["Yangon","Mandalay"],
+ "Bangladesh":["Chittagong","Dhaka","Mongla"],
+ "Sri Lanka":["Colombo","Galle","Trincomalee"],
+ "Egypt":["Alexandria","Port Said","Suez","Cairo","Damietta"],
+ "Latvia":["Riga","Ventspils","Liepaja"],
+ "Lithuania":["Klaipeda","Vilnius"],
+ "Estonia":["Tallinn","Parnu"],
+ "Nigeria":["Lagos","Port Harcourt","Warri"]
+};
+const COMMON_PLACES = ["Odesa","Kyiv","Manila","Mumbai","Chennai","Batumi","Istanbul","Constanta","Novorossiysk","Klaipeda","Riga","Gdynia","Piraeus","Varna","Singapore","Rotterdam"];
 
 /* ===== AcroForm field-name map (fill the real editable fields) ===== */
 const FIELD_PERSONAL = {position:'Rank_Dropdownlist',readiness:'DOA',surname:'Surname',firstname:'Firstname',
-  fathername:'Fathersname',mothername:'Mothersname',dob:'DOB',nationality:'Nationality',pob:'PlaceofBirth',
+  fathername:'Fathersname',mothername:'Mothersname',dob:'DOB',nationality:'Nationality',
   marital:'Maritalstatus',children:'No_Of_Children',address:'Per_Add',zip:'Per_Zip',phone:'Telephone1',
   email:'Email1',messenger:'Social_media1',nok_name:'NOK_Name',nok_relation:'Text12',nok_address:'NOK_Address',
   nok_phone:'NOK_phone',height:'Height',weight:'Weight',overall:'Chest',eyes:'Eyes_Colour',hair:'Hair_Colour',
@@ -378,7 +403,7 @@ function docBlock(id,label){
       <div class="field mini"><label>Number</label><input name="${id}_num"></div>
       <div class="field mini"><label>Issued</label><input type="date" name="${id}_iss"></div>
       <div class="field mini"><label>Valid until</label><input type="date" name="${id}_val"></div>
-      <div class="field mini"><label>Place</label><input name="${id}_place"></div>
+      <div class="field mini"><label>Place</label><input class="dd place-auto" list="dl_places" name="${id}_place" autocomplete="off"></div>
     </div></div>`;
 }
 document.getElementById('passportRows').innerHTML = PASSPORTS.map(p=>docBlock(p[0],p[1])).join('');
@@ -388,7 +413,7 @@ document.getElementById('cocRows').innerHTML = COCS.map(c=>{
       <div class="field mini"><label>Number</label><input name="${c[0]}_num"></div>
       <div class="field mini"><label>Issued</label><input type="date" name="${c[0]}_iss"></div>
       <div class="field mini"><label>Valid until</label><input type="date" name="${c[0]}_val"></div>
-      <div class="field mini"><label>Place</label><input name="${c[0]}_place"></div>${rank}
+      <div class="field mini"><label>Place</label><input class="dd place-auto" list="dl_places" name="${c[0]}_place" autocomplete="off"></div>${rank}
     </div></div>`;
 }).join('');
 
@@ -400,7 +425,7 @@ certList.innerHTML = CERTS.map((name,i)=>`
         <div class="field mini"><label>Number</label><input name="cert_${i}_num"></div>
         <div class="field mini"><label>Issued</label><input type="date" name="cert_${i}_iss"></div>
         <div class="field mini"><label>Valid until</label><input type="date" name="cert_${i}_val"></div>
-        <div class="field mini"><label>Place</label><input name="cert_${i}_place"></div>
+        <div class="field mini"><label>Place</label><input class="dd place-auto" list="dl_places" name="cert_${i}_place" autocomplete="off"></div>
     </div></div>
   </div>`).join('');
 certList.addEventListener('click',e=>{
@@ -416,7 +441,7 @@ document.getElementById('certSearch').addEventListener('input',e=>{
 
 // build <datalist> option sources for the "select or type" fields
 (function buildDatalists(){
-  const sets={dl_ranks:RANKS,dl_countries:COUNTRIES,dl_vessel:VESSEL_TYPES,dl_engine:ENGINE_TYPES};
+  const sets={dl_ranks:RANKS,dl_countries:COUNTRIES,dl_vessel:VESSEL_TYPES,dl_engine:ENGINE_TYPES,dl_pob_cities:[],dl_places:[]};
   const frag=document.createDocumentFragment();
   for(const id in sets){ const dl=document.createElement('datalist'); dl.id=id;
     dl.innerHTML=sets[id].map(o=>`<option value="${o.replace(/"/g,'&quot;')}">`).join(''); frag.appendChild(dl); }
@@ -429,7 +454,7 @@ function foreignEntry(n){ return `<div class="entry" data-entry="foreign"><span 
     <div class="grid three">
       <div class="field"><label>Flag</label><input class="dd" list="dl_countries" name="fbook_${n}_flag" placeholder="Select or type…" autocomplete="off"></div>
       <div class="field"><label>Number</label><input name="fbook_${n}_num"></div>
-      <div class="field"><label>Place</label><input name="fbook_${n}_place"></div>
+      <div class="field"><label>Place</label><input class="dd place-auto" list="dl_places" name="fbook_${n}_place" autocomplete="off"></div>
       <div class="field"><label>Issued</label><input type="date" name="fbook_${n}_iss"></div>
       <div class="field"><label>Valid until</label><input type="date" name="fbook_${n}_val"></div>
     </div></div>`; }
@@ -455,6 +480,48 @@ function addEntry(type){
 document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>addEntry(b.dataset.add)));
 document.addEventListener('click',e=>{ if(e.target.closest('[data-del]')) e.target.closest('.entry').remove(); });
 ['foreign','service','employer'].forEach(addEntry);
+
+/* ===== Place of birth (country+city) & auto-fill of document Place ===== */
+function fillDatalist(id,arr){ const dl=document.getElementById(id); if(dl) dl.innerHTML=arr.map(o=>`<option value="${String(o).replace(/"/g,'&quot;')}">`).join(''); }
+function pobCity(){ return val('pob_city'); }
+function pobCountry(){ return val('pob_country'); }
+function pobPlace(){ return pobCity() || pobCountry(); }   // preferred issue place
+function getPob(){ return [pobCity(),pobCountry()].filter(Boolean).join(', '); }
+function updatePobCities(){ const c=pobCountry(); fillDatalist('dl_pob_cities', CITIES[c]||[]); }
+function updatePlaces(){
+  const s=[]; const p=pobPlace(); if(p)s.push(p);
+  if(pobCountry() && pobCountry()!==p) s.push(pobCountry());
+  COMMON_PLACES.forEach(x=>{ if(!s.includes(x)) s.push(x); });
+  fillDatalist('dl_places', s);
+}
+function refreshAutoPlaces(){
+  // update Place fields that were auto-filled (not manually edited) to current place of birth
+  const p=pobPlace();
+  document.querySelectorAll('input.place-auto[data-auto="1"]').forEach(el=>{ el.value=p; });
+}
+const pobCountryEl=document.querySelector('[name="pob_country"]');
+const pobCityEl=document.querySelector('[name="pob_city"]');
+pobCountryEl.addEventListener('input',()=>{ updatePobCities(); updatePlaces(); refreshAutoPlaces(); });
+pobCityEl.addEventListener('input',()=>{ updatePlaces(); refreshAutoPlaces(); });
+updatePobCities(); updatePlaces();
+
+// auto-fill a document row's Place from place of birth when the user starts filling that document
+document.getElementById('appForm').addEventListener('input',e=>{
+  const el=e.target; const nm=el.getAttribute&&el.getAttribute('name'); if(!nm) return;
+  // when user edits a Number/Issued/Valid of a document row -> prefill its empty Place
+  const m=nm.match(/^(.*)_(num|iss|val)$/);
+  if(m){
+    const place=document.querySelector(`[name="${m[1]}_place"]`);
+    if(place && place.classList.contains('place-auto') && !place.value.trim() && el.value.trim() && pobPlace()){
+      place.value=pobPlace(); place.setAttribute('data-auto','1');
+    }
+  }
+  // if the user manually edits a Place, stop auto-managing it
+  if(el.classList && el.classList.contains('place-auto') && nm.endsWith('_place')){
+    el.setAttribute('data-auto','0');
+  }
+});
+
 
 /* ======================= STEP NAV ======================= */
 const steps=[...document.querySelectorAll('.step')]; const TOTAL=steps.length; let current=1;
@@ -502,7 +569,8 @@ function val(name){const el=document.querySelector(`[name="${name}"]`);return el
 function collect(){
   const d={fields:{},fbooks:[],service:[],employers:[]};
   const F=n=>val(n);
-  ['position','readiness','surname','firstname','fathername','mothername','dob','nationality','pob','marital','children','address','zip','phone','email','messenger','nok_name','nok_relation','nok_address','nok_phone','height','weight','overall','eyes','hair','shoes','edu_name','edu_dept','edu_from','edu_till','signdate'].forEach(k=>d.fields[k]=F(k));
+  ['position','readiness','surname','firstname','fathername','mothername','dob','nationality','marital','children','address','zip','phone','email','messenger','nok_name','nok_relation','nok_address','nok_phone','height','weight','overall','eyes','hair','shoes','edu_name','edu_dept','edu_from','edu_till','signdate'].forEach(k=>d.fields[k]=F(k));
+  d.fields.pob=getPob();
   document.querySelectorAll('[data-entry="foreign"]').forEach(el=>{const g=n=>el.querySelector(`[name$="_${n}"]`)?.value.trim()||'';const flag=g('flag'),num=g('num');if(flag||num)d.fbooks.push([flag,num,g('iss'),g('val'),g('place')]);});
   document.querySelectorAll('[data-entry="service"]').forEach(el=>{const row={};let has=false;SERVICE_FIELDS.forEach(fd=>{const inp=el.querySelector(`[name$="_${fd[0]}"]`);const v=inp?inp.value.trim():'';row[fd[0]]=v;if(v)has=true;});if(has)d.service.push(row);});
   document.querySelectorAll('[data-entry="employer"]').forEach(el=>{const g=n=>el.querySelector(`[name$="_${n}"]`)?.value.trim()||'';const c=g('company');if(c||g('person')||g('contact'))d.employers.push([c,g('person'),g('contact')]);});
@@ -568,6 +636,7 @@ async function buildFilledPDF(){
 
   // personal
   for(const k in FIELD_PERSONAL){ setField(FIELD_PERSONAL[k], fmtIf(k, val(k))); }
+  setField('PlaceofBirth', getPob());
   // passports & CoC
   DOC_ROWS.forEach(([pfx,idx,rankField])=>{
     setField('DOC_NO_'+idx, val(pfx+'_num'));
@@ -628,9 +697,33 @@ async function buildFilledPDF(){
 }
 
 /* ======================= SUBMIT ======================= */
-let lastBlob=null,lastName='application.pdf';
+let lastBlob=null,lastName='application.pdf',resetTimer=null;
 const overlay=document.getElementById('overlay');
 submitBtn.addEventListener('click',submitApp);
+
+function resetToStart(){
+  if(resetTimer){ clearTimeout(resetTimer); resetTimer=null; }
+  const formEl=document.getElementById('appForm');
+  formEl.reset();
+  // signature
+  try{ sctx.clearRect(0,0,canvas.width,canvas.height); }catch(e){} sigEmpty=true;
+  // rebuild dynamic lists to a single empty entry each
+  ['foreign','service','employer'].forEach(t=>{ listsEl[t].innerHTML=''; counters[t]=0; addEntry(t); });
+  // certificates: uncheck, collapse, clear filter
+  document.querySelectorAll('.cert').forEach(c=>{ c.classList.remove('open'); c.style.display=''; });
+  const cs=document.getElementById('certSearch'); if(cs) cs.value='';
+  // reset place-of-birth-driven lists and auto-place markers
+  document.querySelectorAll('input.place-auto').forEach(el=>el.setAttribute('data-auto','0'));
+  try{ updatePobCities(); updatePlaces(); }catch(e){}
+  // clear validation + consent styling
+  document.querySelectorAll('.invalid').forEach(el=>el.classList.remove('invalid'));
+  document.getElementById('consent').closest('.consent').style.outline='';
+  lastBlob=null;
+  overlay.classList.remove('show');
+  showStep(1);
+  window.scrollTo({top:0,behavior:'auto'});
+}
+
 async function submitApp(){
   const consent=document.getElementById('consent');
   if(!consent.checked){ consent.closest('.consent').style.outline='2px solid var(--danger)'; consent.focus(); return; }
@@ -648,8 +741,11 @@ async function submitApp(){
     const done=document.getElementById('ovDone'); done.style.display='flex';
     const ic=document.getElementById('ovIcon'); ic.className='result-icon ok-ic'; ic.textContent='✓';
     document.getElementById('ovDoneTitle').textContent='Your PDF is ready';
-    document.getElementById('ovDoneMsg').textContent='Your details were placed into the company application form and the PDF has started downloading.';
+    document.getElementById('ovDoneMsg').textContent='The PDF has started downloading. Returning to the start…';
+    // auto return to the first page for the next applicant
+    resetTimer=setTimeout(resetToStart, 2500);
   }catch(err){
+    if(resetTimer){ clearTimeout(resetTimer); resetTimer=null; }
     document.getElementById('ovBusy').style.display='none';
     const done=document.getElementById('ovDone'); done.style.display='flex';
     const ic=document.getElementById('ovIcon'); ic.className='result-icon err-ic'; ic.textContent='!';
@@ -658,8 +754,8 @@ async function submitApp(){
   }
 }
 function triggerDownload(){ if(!lastBlob)return; const url=URL.createObjectURL(lastBlob); const a=document.createElement('a'); a.href=url; a.download=lastName; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500); }
-document.getElementById('ovDownload').addEventListener('click',triggerDownload);
-document.getElementById('ovClose').addEventListener('click',()=>overlay.classList.remove('show'));
+document.getElementById('ovDownload').addEventListener('click',()=>{ if(resetTimer){clearTimeout(resetTimer);resetTimer=null; document.getElementById('ovDoneMsg').textContent='The PDF has started downloading.';} triggerDownload(); });
+document.getElementById('ovClose').addEventListener('click',resetToStart);
 
 showStep(1);
 </script>
