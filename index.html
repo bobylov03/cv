@@ -119,6 +119,13 @@
   .sig-error{display:none;color:var(--danger);font-size:12.5px;font-weight:500;margin-top:7px}
   .sig-error.show{display:block}
   .sigpad-wrap.sig-invalid{border-color:var(--danger);box-shadow:0 0 0 3px rgba(198,72,58,.12)}
+  .cb-panel{display:none;margin-top:5px;background:#fff;border:1.5px solid var(--sea);border-radius:10px;
+    box-shadow:0 12px 30px rgba(11,42,69,.16);max-height:240px;overflow-y:auto;-webkit-overflow-scrolling:touch;width:100%}
+  .cb-panel.show{display:block}
+  .cb-item{padding:12px 14px;font-size:15px;cursor:pointer;border-bottom:1px solid var(--line2);color:var(--ink)}
+  .cb-item:last-child{border-bottom:0}
+  .cb-item.active,.cb-item:hover{background:var(--sea-tint)}
+  .cb-empty{padding:12px 14px;color:var(--muted);font-size:13.5px}
 
   .review-box{background:#F8FAFB;border:1px solid var(--line2);border-radius:12px;padding:4px 4px}
   .rev-sec{padding:12px 14px;border-bottom:1px solid var(--line2)}
@@ -188,16 +195,16 @@
     <h2>Position &amp; personal details</h2>
     <p class="sub">Please fill in Latin letters, as in your passport.</p>
     <div class="grid">
-      <div class="field"><label>Position applied for <span class="req">*</span></label><input class="dd" name="position" list="dl_ranks" placeholder="Select or type…" required autocomplete="off"></div>
+      <div class="field"><label>Position applied for <span class="req">*</span></label><input class="dd" name="position" data-list="dl_ranks" placeholder="Select or type…" required autocomplete="off"></div>
       <div class="field"><label>Date of readiness</label><input type="date" name="readiness"></div>
       <div class="field"><label>Surname <span class="req">*</span></label><input name="surname" required></div>
       <div class="field"><label>Name <span class="req">*</span></label><input name="firstname" required></div>
       <div class="field"><label>Father's name</label><input name="fathername"></div>
       <div class="field"><label>Mother's name</label><input name="mothername"></div>
       <div class="field"><label>Date of birth <span class="req">*</span></label><input type="date" name="dob" required></div>
-      <div class="field"><label>Nationality</label><input class="dd" name="nationality" list="dl_countries" placeholder="Select or type…" autocomplete="off"></div>
-      <div class="field"><label>Place of birth — country</label><input class="dd" name="pob_country" list="dl_countries" placeholder="Select or type…" autocomplete="off"></div>
-      <div class="field"><label>Place of birth — city</label><input class="dd" name="pob_city" list="dl_pob_cities" placeholder="Select or type…" autocomplete="off"></div>
+      <div class="field"><label>Nationality</label><input class="dd" name="nationality" data-list="dl_countries" placeholder="Select or type…" autocomplete="off"></div>
+      <div class="field"><label>Place of birth — country</label><input class="dd" name="pob_country" data-list="dl_countries" placeholder="Select or type…" autocomplete="off"></div>
+      <div class="field"><label>Place of birth — city</label><input class="dd" name="pob_city" data-list="dl_pob_cities" placeholder="Select or type…" autocomplete="off"></div>
       <div class="field"><label>Marital status</label>
         <select name="marital"><option value="">Select…</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option></select></div>
       <div class="field"><label>Children under 18</label><input type="number" name="children" min="0" max="20" placeholder="0"></div>
@@ -407,7 +414,7 @@ function docBlock(id,label){
       <div class="field mini"><label>Number</label><input name="${id}_num"></div>
       <div class="field mini"><label>Issued</label><input type="date" name="${id}_iss"></div>
       <div class="field mini"><label>Valid until</label><input type="date" name="${id}_val"></div>
-      <div class="field mini"><label>Place</label><input class="dd place-auto" list="dl_places" name="${id}_place" autocomplete="off"></div>
+      <div class="field mini"><label>Place</label><input class="dd place-auto" data-list="dl_places" name="${id}_place" autocomplete="off"></div>
     </div></div>`;
 }
 document.getElementById('passportRows').innerHTML = PASSPORTS.map(p=>docBlock(p[0],p[1])).join('');
@@ -417,7 +424,7 @@ document.getElementById('cocRows').innerHTML = COCS.map(c=>{
       <div class="field mini"><label>Number</label><input name="${c[0]}_num"></div>
       <div class="field mini"><label>Issued</label><input type="date" name="${c[0]}_iss"></div>
       <div class="field mini"><label>Valid until</label><input type="date" name="${c[0]}_val"></div>
-      <div class="field mini"><label>Place</label><input class="dd place-auto" list="dl_places" name="${c[0]}_place" autocomplete="off"></div>${rank}
+      <div class="field mini"><label>Place</label><input class="dd place-auto" data-list="dl_places" name="${c[0]}_place" autocomplete="off"></div>${rank}
     </div></div>`;
 }).join('');
 
@@ -429,7 +436,7 @@ certList.innerHTML = CERTS.map((name,i)=>`
         <div class="field mini"><label>Number</label><input name="cert_${i}_num"></div>
         <div class="field mini"><label>Issued</label><input type="date" name="cert_${i}_iss"></div>
         <div class="field mini"><label>Valid until</label><input type="date" name="cert_${i}_val"></div>
-        <div class="field mini"><label>Place</label><input class="dd place-auto" list="dl_places" name="cert_${i}_place" autocomplete="off"></div>
+        <div class="field mini"><label>Place</label><input class="dd place-auto" data-list="dl_places" name="cert_${i}_place" autocomplete="off"></div>
     </div></div>
   </div>`).join('');
 certList.addEventListener('click',e=>{
@@ -452,20 +459,61 @@ document.getElementById('certSearch').addEventListener('input',e=>{
   document.body.appendChild(frag);
 })();
 
+/* ===== Custom dropdown, inline under the field (reliable on iOS Safari) ===== */
+(function combobox(){
+  const panel=document.createElement('div'); panel.className='cb-panel';
+  let cur=null, items=[], active=-1, ignore=false;
+  const opts=input=>{ const id=input.getAttribute('data-list'); const dl=id&&document.getElementById(id); return dl?[...dl.options].map(o=>o.value):[]; };
+  function render(input){
+    const q=(input.value||'').toLowerCase().trim();
+    let list=opts(input);
+    let f = q ? list.filter(o=>o.toLowerCase().includes(q)) : list;
+    if(f.length===1 && f[0].toLowerCase()===q) f=list;
+    items=f.slice(0,80); active=-1;
+    panel.innerHTML = items.length
+      ? items.map((o,i)=>`<div class="cb-item" data-i="${i}">${String(o).replace(/</g,'&lt;')}</div>`).join('')
+      : '<div class="cb-empty">No matches — you can type your own</div>';
+  }
+  function open(input){
+    cur=input;
+    input.insertAdjacentElement('afterend', panel);  // inline, in normal flow
+    render(input);
+    panel.classList.add('show');
+    setTimeout(()=>{ try{ input.scrollIntoView({block:'center',behavior:'smooth'}); }catch(_){} },80);
+  }
+  function close(){ panel.classList.remove('show'); if(panel.parentNode) panel.parentNode.removeChild(panel); cur=null; active=-1; }
+  function choose(i){ if(!cur||items[i]==null)return; const inp=cur; ignore=true; inp.value=items[i];
+    inp.dispatchEvent(new Event('input',{bubbles:true})); inp.dispatchEvent(new Event('change',{bubbles:true})); ignore=false; close(); }
+  function hl(){ [...panel.children].forEach((c,i)=>c.classList.toggle('active',i===active)); const el=panel.children[active]; if(el&&el.scrollIntoView)el.scrollIntoView({block:'nearest'}); }
+
+  document.addEventListener('focusin',e=>{ const t=e.target; if(t.matches&&t.matches('input.dd[data-list]')) open(t); });
+  document.addEventListener('click',e=>{ const t=e.target; if(t.matches&&t.matches('input.dd[data-list]')){ if(cur!==t||!panel.classList.contains('show')) open(t); } });
+  document.addEventListener('input',e=>{ const t=e.target; if(ignore)return; if(t===cur){ render(t); if(!panel.classList.contains('show'))panel.classList.add('show'); } });
+  document.addEventListener('focusout',e=>{ if(e.target===cur){ const inp=cur; setTimeout(()=>{ if(document.activeElement!==inp) close(); },180); } });
+  panel.addEventListener('pointerdown',e=>{ const it=e.target.closest('.cb-item'); if(!it)return; e.preventDefault(); choose(+it.dataset.i); });
+  panel.addEventListener('click',e=>{ const it=e.target.closest('.cb-item'); if(!it)return; choose(+it.dataset.i); });
+  document.addEventListener('keydown',e=>{ if(!cur||!panel.classList.contains('show'))return;
+    if(e.key==='ArrowDown'){e.preventDefault();active=Math.min(items.length-1,active+1);hl();}
+    else if(e.key==='ArrowUp'){e.preventDefault();active=Math.max(0,active-1);hl();}
+    else if(e.key==='Enter'&&active>=0){e.preventDefault();choose(active);}
+    else if(e.key==='Escape'){close();} });
+})();
+
+
 const counters={foreign:0,service:0,employer:0};
 const LIMITS={foreign:MAX_FOREIGN,service:MAX_SERVICE,employer:MAX_EMPLOYER};
 function foreignEntry(n){ return `<div class="entry" data-entry="foreign"><span class="entry-num">Book ${n}</span><button type="button" class="del" data-del>✕</button>
     <div class="grid three">
-      <div class="field"><label>Flag</label><input class="dd" list="dl_countries" name="fbook_${n}_flag" placeholder="Select or type…" autocomplete="off"></div>
+      <div class="field"><label>Flag</label><input class="dd" data-list="dl_countries" name="fbook_${n}_flag" placeholder="Select or type…" autocomplete="off"></div>
       <div class="field"><label>Number</label><input name="fbook_${n}_num"></div>
-      <div class="field"><label>Place</label><input class="dd place-auto" list="dl_places" name="fbook_${n}_place" autocomplete="off"></div>
+      <div class="field"><label>Place</label><input class="dd place-auto" data-list="dl_places" name="fbook_${n}_place" autocomplete="off"></div>
       <div class="field"><label>Issued</label><input type="date" name="fbook_${n}_iss"></div>
       <div class="field"><label>Valid until</label><input type="date" name="fbook_${n}_val"></div>
     </div></div>`; }
 const SVC_DD={position:'dl_ranks',vtype:'dl_vessel',etype:'dl_engine',flag:'dl_countries'};
 function serviceEntry(n){ const f=SERVICE_FIELDS.map(fd=>{
     const dl=SVC_DD[fd[0]];
-    const inp = dl ? `<input class="dd" list="${dl}" name="svc_${n}_${fd[0]}" placeholder="Select or type…" autocomplete="off">`
+    const inp = dl ? `<input class="dd" data-list="${dl}" name="svc_${n}_${fd[0]}" placeholder="Select or type…" autocomplete="off">`
                    : `<input type="${fd[2]}" name="svc_${n}_${fd[0]}">`;
     return `<div class="field"><label>${fd[1]}</label>${inp}</div>`; }).join('');
   return `<div class="entry" data-entry="service"><span class="entry-num">Contract ${n}</span><button type="button" class="del" data-del>✕</button><div class="grid three">${f}</div></div>`; }
