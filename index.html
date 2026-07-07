@@ -116,6 +116,9 @@
   .sig-actions{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-top:1px solid var(--line2);background:#FAFCFD}
   .sig-actions button{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;color:var(--muted)}
   .sig-actions button:hover{border-color:var(--sea);color:var(--sea-ink)}
+  .sig-error{display:none;color:var(--danger);font-size:12.5px;font-weight:500;margin-top:7px}
+  .sig-error.show{display:block}
+  .sigpad-wrap.sig-invalid{border-color:var(--danger);box-shadow:0 0 0 3px rgba(198,72,58,.12)}
 
   .review-box{background:#F8FAFB;border:1px solid var(--line2);border-radius:12px;padding:4px 4px}
   .rev-sec{padding:12px 14px;border-bottom:1px solid var(--line2)}
@@ -295,14 +298,15 @@
     <p class="sub">Check your details, sign below, then get your filled PDF.</p>
     <div class="review-box" id="reviewBox"></div>
 
-    <div class="divider"><span>Signature</span></div>
-    <div class="sigpad-wrap">
+    <div class="divider"><span>Signature <span class="req">*</span></span></div>
+    <div class="sigpad-wrap" id="sigWrap">
       <canvas id="sigpad"></canvas>
       <div class="sig-actions">
         <span class="hint">Sign with your finger or mouse</span>
         <button type="button" id="sigClear">Clear</button>
       </div>
     </div>
+    <div id="sigError" class="sig-error">Please sign in the box above before submitting.</div>
     <div class="grid" style="margin-top:14px">
       <div class="field"><label>Date</label><input type="date" name="signdate"></div>
     </div>
@@ -556,7 +560,7 @@ function sizeCanvas(){ const r=canvas.getBoundingClientRect(),dpr=window.deviceP
   if(data){const img=new Image(); img.onload=()=>sctx.drawImage(img,0,0,r.width,r.height); img.src=data;} }
 let drawing=false,lastX,lastY;
 function pos(e){const r=canvas.getBoundingClientRect();const p=e.touches?e.touches[0]:e;return[p.clientX-r.left,p.clientY-r.top];}
-function sstart(e){drawing=true;[lastX,lastY]=pos(e);e.preventDefault();}
+function sstart(e){drawing=true;[lastX,lastY]=pos(e);document.getElementById('sigWrap').classList.remove('sig-invalid');document.getElementById('sigError').classList.remove('show');e.preventDefault();}
 function smove(e){if(!drawing)return;const[x,y]=pos(e);sctx.beginPath();sctx.moveTo(lastX,lastY);sctx.lineTo(x,y);sctx.stroke();[lastX,lastY]=[x,y];sigEmpty=false;e.preventDefault();}
 function send(){drawing=false;}
 canvas.addEventListener('mousedown',sstart);canvas.addEventListener('mousemove',smove);window.addEventListener('mouseup',send);
@@ -707,6 +711,8 @@ function resetToStart(){
   formEl.reset();
   // signature
   try{ sctx.clearRect(0,0,canvas.width,canvas.height); }catch(e){} sigEmpty=true;
+  document.getElementById('sigWrap').classList.remove('sig-invalid');
+  document.getElementById('sigError').classList.remove('show');
   // rebuild dynamic lists to a single empty entry each
   ['foreign','service','employer'].forEach(t=>{ listsEl[t].innerHTML=''; counters[t]=0; addEntry(t); });
   // certificates: uncheck, collapse, clear filter
@@ -726,6 +732,12 @@ function resetToStart(){
 
 async function submitApp(){
   const consent=document.getElementById('consent');
+  if(sigEmpty){
+    const w=document.getElementById('sigWrap'); w.classList.add('sig-invalid');
+    document.getElementById('sigError').classList.add('show');
+    w.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   if(!consent.checked){ consent.closest('.consent').style.outline='2px solid var(--danger)'; consent.focus(); return; }
   if(!validateStep())return;
   overlay.classList.add('show');
